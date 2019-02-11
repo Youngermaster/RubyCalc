@@ -1,0 +1,109 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'calculator'
+require 'calcex'
+#main{
+$stdout.print "> "
+
+$calc = Calculator.new
+
+def comandos
+	e = false
+	c = false
+	ch = true
+	varE
+	for i in 0 ...ARGV.length
+		if(ARGV[i] == "-e")
+			e = true
+		elsif ARGV[i] == "-c"
+			archivo = ARGV[i + 1]
+			if (archivoEwe(archivo))
+				ch = false	
+			end
+		elsif ARGV[i] == "-v"
+			str = ARGV[i+=1]
+			pos = str.split('=')
+			value = $calc.eval(pos[1]).to_i
+			puts value
+			if e == false || !$calc.vars.key?(pos[0])
+				$calc.eval("let " + str).to_i
+				puts $calc.vars[pos[0]]
+			end
+		else
+			if leerAchivo ARGV[i] then
+				ch = false
+			end
+		end
+	end
+	return ch 
+end
+ 
+def varE
+	e = true
+	ENV.each_pair do  |clave,valor|
+		if clave.include? ("CALCVAR")
+	  	clave = clave.delete("CALCVAR")
+	  	$calc.vars[clave] = valor
+		end
+	end  
+end
+
+def leerAchivo name
+	if File.exist?name then
+		File.open(name,'r') do |f1|
+			while line = f1.gets
+				begin
+					puts "= " + $calc.eval(line).to_s
+				rescue Exception => e
+				end		
+			end		
+		end
+	else
+		return false
+	end
+	return true
+end
+
+
+def archivoEwe name
+	id = name[0,name.rindex('.')] + ".ewe"
+	puts "archivoEwe generado" + id
+	if File.exist?name
+		File.open(name, 'r') do |f1|  
+			File.open(id, 'w') do |f2|
+				f2.puts($calc.compileInicial)
+				while line = f1.gets
+					begin
+						f2.puts($calc.compile(line))
+					rescue Exception => e
+					end
+				end
+					f2.puts($calc.compileFinal)
+			end
+		end
+	else
+		return false
+	end
+	return true
+end
+
+if comandos
+
+	until STDIN.eof? 
+		text = STDIN.gets
+		begin
+  			puts "= " + $calc.eval(text).to_s
+		rescue ParseError
+  			puts "Parse Error"
+		rescue UnrecognizedTokenException
+  			puts "UnrecognizedTokenException"
+		rescue Exception => e
+  			puts "Unkown exception: #{e.class}"
+  			puts "Messsage: #{e.message}"
+  			puts e.backtrace
+		end
+		$stdout.print "> "
+	end
+end
+#}
